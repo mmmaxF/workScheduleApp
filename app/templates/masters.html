@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>簡易マスタ管理</h1>
+
+<section class="grid">
+  <div class="card">
+    <h2>メンバー追加</h2>
+    <form method="post" action="/ui/members/create" class="stack-form">
+      <label>表示名 <input name="display_name" required></label>
+      <label>略称 <input name="short_name"></label>
+      <label>表示順 <input name="display_order" type="number" value="100"></label>
+      <button>追加</button>
+    </form>
+
+    <h3>メンバー一覧</h3>
+    <table>
+      <tr><th>ID</th><th>表示名</th><th>略称</th><th>有効</th></tr>
+      {% for m in members %}
+        <tr><td>{{ m.id }}</td><td>{{ m.display_name }}</td><td>{{ m.short_name or '' }}</td><td>{{ m.is_active }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>予定種類追加</h2>
+    <form method="post" action="/ui/event-types/create" class="stack-form">
+      <label>コード <input name="code" required></label>
+      <label>名前 <input name="name" required></label>
+      <label>短縮表示 <input name="short_label"></label>
+      <label>表示色 <input name="display_color" placeholder="#dbeafe"></label>
+      <label><input type="checkbox" name="is_leave" value="true"> 休暇扱い</label>
+      <label><input type="checkbox" name="is_work_assignment" value="true"> 業務予定扱い</label>
+      <label><input type="checkbox" name="requires_capacity_check" value="true"> 将来の定員チェック対象</label>
+      <label>表示順 <input name="display_order" type="number" value="100"></label>
+      <button>追加</button>
+    </form>
+
+    <h3>予定種類一覧</h3>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>短縮</th><th>色</th><th>有効</th></tr>
+      {% for e in event_types %}
+        <tr>
+          <td>{{ e.id }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.short_label or '' }}</td>
+          <td><span class="color-chip" style="background: {{ e.display_color or '#e5e7eb' }}"></span>{{ e.display_color or '' }}</td>
+          <td>{{ e.is_active }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+</section>
+{% endblock %}

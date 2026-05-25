@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title">
+  <h1>{{ calendar.year }}年{{ calendar.month }}月 月間予定表</h1>
+  <div class="actions">
+    <a class="button" href="/calendar?year={{ prev_year }}&month={{ prev_month }}">前月</a>
+    <a class="button" href="/calendar?year={{ next_year }}&month={{ next_month }}">翌月</a>
+  </div>
+</section>
+
+<section class="card">
+  <h2>予定draftを作成</h2>
+  <form method="post" action="/ui/drafts/create" class="inline-form">
+    <label>メンバー
+      <select name="member_id" required>
+        {% for member in members %}
+          <option value="{{ member.id }}">{{ member.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>日付
+      <input type="date" name="event_date" required>
+    </label>
+    <label>予定種類
+      <select name="event_type_id" required>
+        {% for event_type in event_types %}
+          <option value="{{ event_type.id }}">{{ event_type.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>メモ
+      <input type="text" name="memo">
+    </label>
+    <button type="submit">draft作成</button>
+  </form>
+</section>
+
+<section class="schedule-wrap">
+  <table class="schedule-table">
+    <thead>
+      <tr>
+        <th class="member-col">メンバー</th>
+        {% for day in calendar.days %}
+          <th class="{{ 'weekend' if day.is_weekend else '' }}">
+            {{ day.day }}<br><span>{{ day.weekday }}</span>
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for member in calendar.members %}
+        <tr>
+          <th class="member-col">{{ member.display_name }}</th>
+          {% for day in calendar.days %}
+            <td class="{{ 'weekend' if day.is_weekend else '' }}">
+              {% for event in member.events_by_date[day.date] %}
+                <div class="event-pill" style="background: {{ event.display_color or '#e5e7eb' }}">
+                  {{ event.display_label }}
+                </div>
+              {% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

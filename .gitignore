@@ -1,0 +1,87 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.sample
+
+# ※このプロジェクトでは .env.example は作らない方針
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Docker / local volumes
+# =========================
+docker-data/
+postgres-data/
+pgdata/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Editor / IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Node / frontend cache
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Build / dist
+# =========================
+dist/
+build/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# =========================
+# Uploaded / generated files
+# =========================
+uploads/
+exports/
+downloads/

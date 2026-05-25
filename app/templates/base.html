@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>Headless Calendar Step 1</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="header">
+  <div class="brand">Headless Calendar Step 1</div>
+  <nav>
+    <a href="/calendar">月間予定表</a>
+    <a href="/masters">簡易マスタ</a>
+    <a href="/drafts">Draft承認</a>
+    <a href="/docs" target="_blank">API Docs</a>
+  </nav>
+</header>
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
