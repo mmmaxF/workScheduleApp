@@ -4,15 +4,10 @@
 
 <section class="grid">
   <div class="card">
-    <h2>メンバー追加</h2>
-    <form method="post" action="/ui/members/create" class="stack-form">
-      <label>表示名 <input name="display_name" required></label>
-      <label>略称 <input name="short_name"></label>
-      <label>表示順 <input name="display_order" type="number" value="100"></label>
-      <button>追加</button>
-    </form>
-
-    <h3>メンバー一覧</h3>
+    <div class="page-title">
+      <h2>メンバー</h2>
+      <button onclick="document.getElementById('memberModal').classList.add('active')">メンバー追加</button>
+    </div>
     <table>
       <tr><th>ID</th><th>表示名</th><th>略称</th><th>有効</th></tr>
       {% for m in members %}
@@ -22,20 +17,10 @@
   </div>
 
   <div class="card">
-    <h2>予定種類追加</h2>
-    <form method="post" action="/ui/event-types/create" class="stack-form">
-      <label>コード <input name="code" required></label>
-      <label>名前 <input name="name" required></label>
-      <label>短縮表示 <input name="short_label"></label>
-      <label>表示色 <input name="display_color" placeholder="#dbeafe"></label>
-      <label><input type="checkbox" name="is_leave" value="true"> 休暇扱い</label>
-      <label><input type="checkbox" name="is_work_assignment" value="true"> 業務予定扱い</label>
-      <label><input type="checkbox" name="requires_capacity_check" value="true"> 将来の定員チェック対象</label>
-      <label>表示順 <input name="display_order" type="number" value="100"></label>
-      <button>追加</button>
-    </form>
-
-    <h3>予定種類一覧</h3>
+    <div class="page-title">
+      <h2>予定種類</h2>
+      <button onclick="document.getElementById('eventTypeModal').classList.add('active')">予定種類追加</button>
+    </div>
     <table>
       <tr><th>ID</th><th>名前</th><th>短縮</th><th>色</th><th>有効</th></tr>
       {% for e in event_types %}
@@ -50,4 +35,39 @@
     </table>
   </div>
 </section>
+
+<div id="memberModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>メンバー追加</h2>
+    <form method="post" action="/ui/members/create" class="stack-form">
+      <label>表示名 <input name="display_name" required></label>
+      <label>略称 <input name="short_name"></label>
+      <label>表示順 <input name="display_order" type="number" value="100"></label>
+      <div class="modal-actions">
+        <button type="button" class="button-secondary" onclick="document.getElementById('memberModal').classList.remove('active')">キャンセル</button>
+        <button type="submit">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="eventTypeModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>予定種類追加</h2>
+    <form method="post" action="/ui/event-types/create" class="stack-form">
+      <label>コード <input name="code" required></label>
+      <label>名前 <input name="name" required></label>
+      <label>短縮表示 <input name="short_label"></label>
+      <label>表示色 <input name="display_color" placeholder="#dbeafe"></label>
+      <label><input type="checkbox" name="is_leave" value="true"> 休暇扱い</label>
+      <label><input type="checkbox" name="is_work_assignment" value="true"> 業務予定扱い</label>
+      <label><input type="checkbox" name="requires_capacity_check" value="true"> 将来の定員チェック対象</label>
+      <label>表示順 <input name="display_order" type="number" value="100"></label>
+      <div class="modal-actions">
+        <button type="button" class="button-secondary" onclick="document.getElementById('eventTypeModal').classList.remove('active')">キャンセル</button>
+        <button type="submit">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

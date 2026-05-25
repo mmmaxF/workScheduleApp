@@ -5,35 +5,41 @@
   <div class="actions">
     <a class="button" href="/calendar?year={{ prev_year }}&month={{ prev_month }}">前月</a>
     <a class="button" href="/calendar?year={{ next_year }}&month={{ next_month }}">翌月</a>
+    <button onclick="document.getElementById('draftModal').classList.add('active')">カレンダーに載せる</button>
   </div>
 </section>
 
-<section class="card">
-  <h2>予定draftを作成</h2>
-  <form method="post" action="/ui/drafts/create" class="inline-form">
-    <label>メンバー
-      <select name="member_id" required>
-        {% for member in members %}
-          <option value="{{ member.id }}">{{ member.display_name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>日付
-      <input type="date" name="event_date" required>
-    </label>
-    <label>予定種類
-      <select name="event_type_id" required>
-        {% for event_type in event_types %}
-          <option value="{{ event_type.id }}">{{ event_type.name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>メモ
-      <input type="text" name="memo">
-    </label>
-    <button type="submit">draft作成</button>
-  </form>
-</section>
+<div id="draftModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>予定draftを作成</h2>
+    <form method="post" action="/ui/drafts/create" class="stack-form">
+      <label>メンバー
+        <select name="member_id" required>
+          {% for member in members %}
+            <option value="{{ member.id }}">{{ member.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>日付
+        <input type="date" name="event_date" required>
+      </label>
+      <label>予定種類
+        <select name="event_type_id" required>
+          {% for event_type in event_types %}
+            <option value="{{ event_type.id }}">{{ event_type.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>メモ
+        <input type="text" name="memo">
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="button-secondary" onclick="document.getElementById('draftModal').classList.remove('active')">キャンセル</button>
+        <button type="submit">draft作成</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <section class="schedule-wrap">
   <table class="schedule-table">
