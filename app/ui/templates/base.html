@@ -7,16 +7,17 @@
 </head>
 <body>
 <header class="header">
-  <div class="brand">Headless Calendar Step 1</div>
+  <div class="brand">Headless Calendar Step 2</div>
   <nav>
     <a href="/calendar">月間予定表</a>
     <a href="/masters">簡易マスタ</a>
-    <a href="/drafts">Draft承認</a>
+    <a href="/dev/db-viewer">DBビューアー</a>
     <a href="/docs" target="_blank">API Docs</a>
   </nav>
 </header>
 <main class="container">
   {% block content %}{% endblock %}
 </main>
+{% block scripts %}{% endblock %}
 </body>
 </html>

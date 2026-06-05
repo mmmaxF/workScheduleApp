@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title">
+  <div>
+    <h1>{{ calendar.year }}年{{ calendar.month }}月 月間予定表</h1>
+    <p class="page-note">表のセルにある「＋」を押すと、そのメンバー・日付を指定した状態で予定を登録できます。</p>
+  </div>
+  <div class="actions">
+    <select id="departmentFilter" onchange="filterByDepartment()">
+      <option value="">全所属</option>
+      {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="button" data-open-modal="eventModal">予定を登録</button>
+    <button type="button" class="button secondary" data-open-modal="importModal">CSVインポート</button>
+    <button type="button" class="button secondary" data-open-modal="exportModal">CSVエクスポート</button>
+    <a class="button secondary" href="/calendar?year={{ prev_year }}&month={{ prev_month }}{% if department_id %}&department_id={{ department_id }}{% endif %}">前月</a>
+    <a class="button secondary" href="/calendar?year={{ next_year }}&month={{ next_month }}{% if department_id %}&department_id={{ department_id }}{% endif %}">翌月</a>
+  </div>
+</section>
+
+<section class="vertical-sections">
+  <div class="section-panel minimized" id="section-chat">
+    <div class="section-header">
+      <button type="button" class="section-toggle" data-section="chat" aria-label="最小化">−</button>
+      <h3 class="section-title">AIアシスタント</h3>
+    </div>
+    <div class="section-content">
+      <div class="chat-section">
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-message system">
+              <div class="message-content">勤務予定について質問できます。例：「明日のRDは？」「来週の予定を教えて」</div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+              <textarea id="chatInput" placeholder="勤務予定について質問してください..." rows="1"></textarea>
+            </div>
+            <button type="button" class="button" id="sendChatBtn">送信</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-panel" id="section-schedule">
+    <div class="section-header">
+      <button type="button" class="section-toggle" data-section="schedule" aria-label="最小化">−</button>
+      <h3 class="section-title">スケジュール</h3>
+      <div class="regular-schedule-selector">
+        <select id="regularScheduleSelect">
+          <option value="">レギュラーを選択</option>
+          {% for rs in regular_schedules %}
+            <option value="{{ rs.id }}">{{ rs.name }} ({{ rs.program.name if rs.program else '-' }} / {{ rs.studio.name if rs.studio else '-' }} / {{ {'0': '月', '1': '火', '2': '水', '3': '木', '4': '金'}.get(str(rs.day_of_week), str(rs.day_of_week)) }})</option>
+          {% endfor %}
+        </select>
+        <button type="button" class="button compact" id="applyRegularScheduleBtn">適用</button>
+      </div>
+    </div>
+    <div class="section-content">
+      <table class="schedule-table">
+    <thead>
+      <tr>
+        <th class="name-col">名前</th>
+        {% for day in calendar.days %}
+          <th class="{{ 'weekend' if day.is_weekend else '' }}">
+            {{ day.day }}<br><span>{{ day.weekday }}</span>
+            {% if calendar.capacity_info and calendar.capacity_info[day.date] %}
+              <div class="capacity-indicator">
+                {% for et_id, cap in calendar.capacity_info[day.date].items() %}
+                  <span class="capacity-badge {{ 'ok' if cap.sufficient else 'warning' }}" title="{{ cap.event_type_name }}: {{ cap.message }}">
+                    {{ cap.event_type_name }} {{ cap.current }}/{{ cap.required }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for studio in calendar.studios %}
+        <tr>
+          <th class="name-col studio-row">{{ studio.studio_name }}</th>
+          {% for day in calendar.days %}
+            <td class="schedule-cell {{ 'weekend' if day.is_weekend else '' }}">
+              <button
+                type="button"
+                class="cell-add-button"
+                title="{{ studio.studio_name }} / {{ day.date }} に番組スケジュールを登録"
+                data-open-program-schedule-modal
+                data-studio-id="{{ studio.studio_id }}"
+                data-event-date="{{ day.date }}"
+              >＋</button>
+              {% for program in studio.programs_by_date[day.date] %}
+                <div class="program-pill clickable" style="background: {{ program.program_display_color or '#e5e7eb' }}"
+                     data-edit-program-schedule
+                     data-schedule-id="{{ program.schedule_id }}"
+                     data-program-name="{{ program.program_name }}"
+                     data-studio-id="{{ program.studio_id }}"
+                     data-event-date="{{ program.event_date }}">
+                  {{ program.program_short_label or program.program_name }}
+                </div>
+              {% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      <tr class="section-divider">
+        <td colspan="{{ calendar.days|length + 1 }}"></td>
+      </tr>
+      {% for member in calendar.members %}
+        <tr>
+          <th class="name-col member-row">{{ member.display_name }}</th>
+          {% for day in calendar.days %}
+            <td class="schedule-cell {{ 'weekend' if day.is_weekend else '' }}">
+              <button
+                type="button"
+                class="cell-add-button"
+                title="{{ member.display_name }} / {{ day.date }} に予定を登録"
+                data-open-event-modal
+                data-member-id="{{ member.member_id }}"
+                data-event-date="{{ day.date }}"
+              >＋</button>
+              {% for event in member.events_by_date[day.date] %}
+                <div class="event-pill clickable" style="background: {{ event.display_color or '#e5e7eb' }}"
+                     data-edit-event
+                     data-event-id="{{ event.id }}"
+                     data-member-id="{{ event.member_id }}"
+                     data-event-date="{{ event.event_date }}"
+                     data-title="{{ event.title }}"
+                     data-event-type-id="{{ event.event_type_id or '' }}"
+                     data-display-label="{{ event.display_label or '' }}"
+                     data-memo="{{ event.memo or '' }}">
+                  {{ event.display_label }}
+                </div>
+              {% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+    </div>
+  </div>
+</section>
+
+<div class="modal-backdrop" id="eventModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="eventModalTitle">予定を登録</h2>
+        <p class="modal-note">定員チェックや重複チェックが行われます。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+
+    <form method="post" action="/ui/events/create" class="modal-form">
+      <label>メンバー
+        <select name="member_id" id="eventMemberSelect" required>
+          {% for member in members %}
+            <option value="{{ member.id }}">{{ member.display_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>日付
+        <input type="date" name="event_date" id="eventDateInput" required>
+      </label>
+      <label>予定名
+        <input type="text" name="title" required placeholder="予定名を入力">
+      </label>
+      <label>予定種類マスタ
+        <select id="eventTypeSelect">
+          <option value="">選択なし（フリーテキスト）</option>
+          {% for event_type in event_types %}
+            <option value="{{ event_type.id }}" data-name="{{ event_type.name }}">{{ event_type.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="hidden" name="event_type_id" id="hiddenEventTypeId">
+      <label>メモ
+        <input type="text" name="memo" placeholder="必要に応じて入力">
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="button" class="button danger" id="deleteEventBtn" style="display: none;">削除</button>
+        <button type="submit">登録</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="programScheduleModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="programScheduleModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="programScheduleModalTitle">番組スケジュールを編集</h2>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+
+    <form method="post" action="/ui/program-schedules/edit" class="modal-form">
+      <input type="hidden" name="schedule_id" id="scheduleIdInput">
+      <input type="hidden" name="studio_id" id="studioIdInput">
+      <input type="hidden" name="program_id" id="programIdInput">
+      <label>番組
+        <select id="programSelect">
+          <option value="">選択なし（フリーテキスト）</option>
+          {% for program in programs %}
+            <option value="{{ program.id }}" data-name="{{ program.name }}">{{ program.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label id="programNameLabel" style="display: none;">番組名（フリーテキスト）
+        <input type="text" name="program_name" id="programNameInput" placeholder="番組名を入力">
+      </label>
+      <label>日付
+        <input type="date" name="event_date" id="programDateInput" required>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="button" class="button danger" id="deleteProgramScheduleBtn" style="display: none;">削除</button>
+        <button type="submit">更新</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="importModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="importModalTitle">CSVインポート</h2>
+        <p class="modal-note">CSVファイルをアップロードしてデータをインポートします。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+
+    <div class="modal-form">
+      <label>インポート種類
+        <select id="importType" required>
+          <option value="members">メンバー</option>
+          <option value="event_types">予定種類</option>
+          <option value="events">予定</option>
+          <option value="programs">番組</option>
+          <option value="program_schedules">番組スケジュール</option>
+        </select>
+      </label>
+      <label>インポートモード
+        <div class="radio-group">
+          <label class="check-row"><input type="radio" name="importMode" value="append" checked> 追加（既存データを残して追加・更新）</label>
+          <label class="check-row"><input type="radio" name="importMode" value="replace"> 上書き（既存データを全削除してインポート）</label>
+        </div>
+      </label>
+      <label id="csvFileLabel">CSVファイル
+        <input type="file" id="importFile" accept=".csv" required>
+      </label>
+      <div class="modal-actions" style="margin-top: 8px;">
+        <button type="button" class="button secondary" onclick="downloadTemplate()">雛形をダウンロード</button>
+      </div>
+      <div id="importLoadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">処理中...</div>
+      </div>
+      <div id="importPreview" class="import-preview" style="display: none;">
+        <h3>プレビュー</h3>
+        <div id="importPreviewContent"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="button" class="button" id="previewImportBtn">プレビュー</button>
+        <button type="button" class="button" id="executeImportBtn" style="display: none;">インポート実行</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="exportModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="exportModalTitle">CSVエクスポート</h2>
+        <p class="modal-note">データをCSVファイルとしてエクスポートします。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+
+    <div class="modal-form">
+      <label>エクスポート種類
+        <select id="exportType" required>
+          <option value="members">メンバー</option>
+          <option value="event_types">予定種類</option>
+          <option value="events">予定（全件）</option>
+          <option value="monthly">予定（月指定）</option>
+          <option value="programs">番組</option>
+          <option value="program_schedules">番組スケジュール</option>
+        </select>
+      </label>
+      <div id="monthSelector" style="display: none;">
+        <label>年月
+          <input type="month" id="exportYearMonth" value="{{ calendar.year }}-{{ '%02d'|format(calendar.month) }}">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="button" class="button" id="executeExportBtn">エクスポート</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/calendar.js"></script>
+<script>
+function downloadTemplate() {
+  const importType = document.getElementById("importType").value;
+  const url = `/api/calendar/exports/csv?export_type=${importType}&template=true`;
+  window.location.href = url;
+}
+</script>
+{% endblock %}

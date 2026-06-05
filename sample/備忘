@@ -1,0 +1,10 @@
+curl -X POST http://localhost:8000/api/calendar/events/bulk \
+  -H "Content-Type: application/json" \
+  -d @sample/work_events_2026_06.json
+
+
+docker compose exec -T postgres psql -U headless_calendar_user -d headless_calendar_db -c "DELETE FROM calendar_events WHERE event_date >= '2026-06-01' AND event_date <= '2026-06-30';"
+
+
+
+

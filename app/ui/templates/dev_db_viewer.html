@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title">
+  <div>
+    <h1>データベースビューアー</h1>
+    <p class="page-note">開発者用ツール：データベースの全テーブルを閲覧できます</p>
+  </div>
+  <div class="actions">
+    <button type="button" class="button" id="loadTablesBtn">テーブル一覧を読み込み</button>
+  </div>
+</section>
+
+<section class="db-viewer">
+  <div class="table-list" id="tableList">
+    <h3 class="section-title">テーブル一覧</h3>
+    <div id="tablesLoading" style="display: none;">読み込み中...</div>
+    <ul id="tablesList" style="list-style: none; padding: 0;"></ul>
+  </div>
+
+  <div class="table-data" id="tableData">
+    <h3 class="section-title">テーブルデータ</h3>
+    <div id="tableInfo" style="margin-bottom: 12px;"></div>
+    <div id="dataLoading" style="display: none;">読み込み中...</div>
+    <div id="tableContent" style="overflow-x: auto;"></div>
+    <div id="pagination" style="margin-top: 12px;"></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const loadTablesBtn = document.getElementById("loadTablesBtn");
+const tablesList = document.getElementById("tablesList");
+const tablesLoading = document.getElementById("tablesLoading");
+const tableInfo = document.getElementById("tableInfo");
+const dataLoading = document.getElementById("dataLoading");
+const tableContent = document.getElementById("tableContent");
+const pagination = document.getElementById("pagination");
+
+window.currentTable = null;
+window.currentOffset = 0;
+const limit = 50;
+
+// Auto-load tables on page load
+document.addEventListener("DOMContentLoaded", loadTables);
+
+loadTablesBtn.addEventListener("click", loadTables);
+
+async function loadTables() {
+  tablesLoading.style.display = "block";
+  tablesList.innerHTML = "";
+
+  try {
+    const response = await fetch("/api/dev/tables");
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to load tables");
+    }
+
+    const data = await response.json();
+    const tables = data.data.tables;
+
+    tables.forEach(table => {
+      const li = document.createElement("li");
+      li.style.padding = "8px 12px";
+      li.style.borderBottom = "1px solid #e5e7eb";
+      li.style.cursor = "pointer";
+      li.textContent = table;
+      li.addEventListener("click", () => {
+        window.currentOffset = 0;
+        loadTableData(table);
+      });
+      tablesList.appendChild(li);
+    });
+  } catch (error) {
+    console.error("Error loading tables:", error);
+    tablesList.innerHTML = `<li style="color: red; padding: 8px;">エラー: ${error.message}</li>`;
+  } finally {
+    tablesLoading.style.display = "none";
+  }
+}
+
+async function loadTableData(tableName) {
+  window.currentTable = tableName;
+
+  tableInfo.textContent = `テーブル: ${tableName}`;
+  dataLoading.style.display = "block";
+  tableContent.innerHTML = "";
+  pagination.innerHTML = "";
+
+  try {
+    const response = await fetch(`/api/dev/tables/${tableName}?limit=${limit}&offset=${window.currentOffset}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to load table data");
+    }
+
+    const data = await response.json();
+    renderTableData(data.data);
+  } catch (error) {
+    console.error("Error loading table data:", error);
+    tableContent.innerHTML = `<div style="color: red;">エラー: ${error.message}</div>`;
+  } finally {
+    dataLoading.style.display = "none";
+  }
+}
+
+function renderTableData(tableData) {
+  const { columns, data, total } = tableData;
+
+  if (data.length === 0) {
+    tableContent.innerHTML = "<div>データがありません</div>";
+    return;
+  }
+
+  let html = "<table style='border-collapse: collapse; width: 100%; font-size: 12px;'>";
+  
+  // Header
+  html += "<thead><tr style='background: #f9fafb;'>";
+  columns.forEach(col => {
+    html += `<th style='border: 1px solid #e5e7eb; padding: 8px; text-align: left;'>${col}</th>`;
+  });
+  html += "</tr></thead>";
+
+  // Body
+  html += "<tbody>";
+  data.forEach(row => {
+    html += "<tr>";
+    columns.forEach(col => {
+      const value = row[col];
+      const displayValue = value === null ? "NULL" : value;
+      html += `<td style='border: 1px solid #e5e7eb; padding: 8px;'>${displayValue}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+
+  tableContent.innerHTML = html;
+
+  // Pagination
+  const totalPages = Math.ceil(total / limit);
+  if (totalPages > 1) {
+    let paginationHtml = `<div style="display: flex; gap: 8px; align-items: center;">`;
+    paginationHtml += `<span>全 ${total} 件</span>`;
+    
+    if (window.currentOffset > 0) {
+      paginationHtml += `<button class="button secondary" data-action="prev">前へ</button>`;
+    }
+    
+    paginationHtml += `<span>${Math.floor(window.currentOffset / limit) + 1} / ${totalPages}</span>`;
+    
+    if (window.currentOffset + limit < total) {
+      paginationHtml += `<button class="button secondary" data-action="next">次へ</button>`;
+    }
+    
+    paginationHtml += "</div>";
+    pagination.innerHTML = paginationHtml;
+    
+    // Add event delegation
+    pagination.onclick = function(e) {
+      if (e.target.tagName === 'BUTTON') {
+        const action = e.target.dataset.action;
+        if (action === 'prev') {
+          window.currentOffset = Math.max(0, window.currentOffset - limit);
+          loadTableData(window.currentTable);
+        } else if (action === 'next') {
+          window.currentOffset = window.currentOffset + limit;
+          loadTableData(window.currentTable);
+        }
+      }
+    };
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,818 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title">
+  <div>
+    <h1>簡易マスタ管理</h1>
+    <p class="page-note">新規登録はボタンからモーダルを開いて入力します。</p>
+  </div>
+  <div class="actions">
+    <button type="button" class="button" data-open-modal="memberModal">メンバー追加</button>
+    <button type="button" class="button" data-open-modal="eventTypeModal">予定種類追加</button>
+    <button type="button" class="button" data-open-modal="departmentModal">所属追加</button>
+    <button type="button" class="button" data-open-modal="studioModal">スタジオ追加</button>
+    <button type="button" class="button" data-open-modal="programModal">番組追加</button>
+    <button type="button" class="button" data-open-modal="capacityRuleModal">定員ルール追加</button>
+    <button type="button" class="button" data-open-modal="regularScheduleModal">レギュラー追加</button>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <div class="card-header">
+      <h2>メンバー一覧</h2>
+      <button type="button" class="button compact" data-open-modal="memberModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>表示名</th><th>略称</th><th>有効</th><th>所属</th><th>操作</th></tr>
+      {% for m in members %}
+        <tr>
+          <td>{{ m.id }}</td>
+          <td>{{ m.display_name }}</td>
+          <td>{{ m.short_name or '' }}</td>
+          <td>{{ '有効' if m.is_active else '無効' }}</td>
+          <td>
+            {% set dept_names = [] %}
+            {% for md in member_departments %}
+              {% if md.member_id == m.id and md.department %}
+                {% set _ = dept_names.append(md.department.name) %}
+              {% endif %}
+            {% endfor %}
+            {{ dept_names | join(', ') if dept_names else '-' }}
+          </td>
+          <td>
+            <button type="button" class="button compact" data-edit-member data-id="{{ m.id }}" data-display-name="{{ m.display_name }}" data-short-name="{{ m.short_name or '' }}" data-display-order="{{ m.display_order }}" data-is-active="{{ m.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-member data-id="{{ m.id }}" data-name="{{ m.display_name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-member data-id="{{ m.id }}" data-name="{{ m.display_name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>予定種類一覧</h2>
+      <button type="button" class="button compact" data-open-modal="eventTypeModal">追加</button>
+    </div>
+    <p class="page-note">予定種類は、定員ルール・色分け・分類に使う予定だけ登録します。通常の予定名はフリーテキストで登録できます。</p>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>短縮</th><th>色</th><th>有効</th><th>定員チェック</th><th>操作</th></tr>
+      {% for e in event_types %}
+        <tr>
+          <td>{{ e.id }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.short_label or '' }}</td>
+          <td><span class="color-chip" style="background: {{ e.display_color or '#e5e7eb' }}"></span>{{ e.display_color or '' }}</td>
+          <td>{{ '有効' if e.is_active else '無効' }}</td>
+          <td>{{ '対象' if e.requires_capacity_check else '-' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-event-type data-id="{{ e.id }}" data-code="{{ e.code }}" data-name="{{ e.name }}" data-short-label="{{ e.short_label or '' }}" data-display-color="{{ e.display_color or '' }}" data-display-order="{{ e.display_order }}" data-is-leave="{{ e.is_leave }}" data-is-work-assignment="{{ e.is_work_assignment }}" data-requires-capacity-check="{{ e.requires_capacity_check }}" data-is-active="{{ e.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-event-type data-id="{{ e.id }}" data-name="{{ e.name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-event-type data-id="{{ e.id }}" data-name="{{ e.name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>所属一覧</h2>
+      <button type="button" class="button compact" data-open-modal="departmentModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>コード</th><th>有効</th><th>操作</th></tr>
+      {% for d in departments %}
+        <tr>
+          <td>{{ d.id }}</td>
+          <td>{{ d.name }}</td>
+          <td>{{ d.code }}</td>
+          <td>{{ '有効' if d.is_active else '無効' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-department data-id="{{ d.id }}" data-name="{{ d.name }}" data-code="{{ d.code }}" data-display-order="{{ d.display_order }}" data-is-active="{{ d.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-department data-id="{{ d.id }}" data-name="{{ d.name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-department data-id="{{ d.id }}" data-name="{{ d.name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>定員ルール一覧</h2>
+      <button type="button" class="button compact" data-open-modal="capacityRuleModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>予定種類</th><th>所属</th><th>曜日</th><th>必要人数</th><th>有効</th><th>操作</th></tr>
+      {% for r in capacity_rules %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.event_type.name if r.event_type else '-' }}</td>
+          <td>{{ r.department.name if r.department else '全所属' }}</td>
+          <td>{{ {'weekday': '平日', 'weekend': '週末', 'all': '全日'}.get(r.day_type, r.day_type) }}</td>
+          <td>{{ r.required_count }}</td>
+          <td>{{ '有効' if r.is_active else '無効' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-capacity-rule data-id="{{ r.id }}" data-event-type-id="{{ r.event_type_id }}" data-department-id="{{ r.department_id or 0 }}" data-day-type="{{ r.day_type }}" data-required-count="{{ r.required_count }}" data-is-active="{{ r.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-capacity-rule data-id="{{ r.id }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-capacity-rule data-id="{{ r.id }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>スタジオ一覧</h2>
+      <button type="button" class="button compact" data-open-modal="studioModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>コード</th><th>有効</th><th>操作</th></tr>
+      {% for s in studios %}
+        <tr>
+          <td>{{ s.id }}</td>
+          <td>{{ s.name }}</td>
+          <td>{{ s.code }}</td>
+          <td>{{ '有効' if s.is_active else '無効' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-studio data-id="{{ s.id }}" data-name="{{ s.name }}" data-code="{{ s.code }}" data-display-order="{{ s.display_order }}" data-is-active="{{ s.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-studio data-id="{{ s.id }}" data-name="{{ s.name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-studio data-id="{{ s.id }}" data-name="{{ s.name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>番組一覧</h2>
+      <button type="button" class="button compact" data-open-modal="programModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>コード</th><th>短縮</th><th>色</th><th>有効</th><th>操作</th></tr>
+      {% for p in programs %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.name }}</td>
+          <td>{{ p.code }}</td>
+          <td>{{ p.short_label or '' }}</td>
+          <td><span class="color-chip" style="background: {{ p.display_color or '#e5e7eb' }}"></span>{{ p.display_color or '' }}</td>
+          <td>{{ '有効' if p.is_active else '無効' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-program data-id="{{ p.id }}" data-name="{{ p.name }}" data-code="{{ p.code }}" data-short-label="{{ p.short_label or '' }}" data-display-color="{{ p.display_color or '' }}" data-display-order="{{ p.display_order }}" data-is-active="{{ p.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-program data-id="{{ p.id }}" data-name="{{ p.name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-program data-id="{{ p.id }}" data-name="{{ p.name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>レギュラー一覧</h2>
+      <button type="button" class="button compact" data-open-modal="regularScheduleModal">追加</button>
+    </div>
+    <table>
+      <tr><th>ID</th><th>名前</th><th>番組</th><th>スタジオ</th><th>曜日</th><th>有効</th><th>操作</th></tr>
+      {% for r in regular_schedules %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.program.name if r.program else '-' }}</td>
+          <td>{{ r.studio.name if r.studio else '-' }}</td>
+          <td>{{ {'0': '月', '1': '火', '2': '水', '3': '木', '4': '金'}.get(str(r.day_of_week), str(r.day_of_week)) }}</td>
+          <td>{{ '有効' if r.is_active else '無効' }}</td>
+          <td>
+            <button type="button" class="button compact" data-edit-regular-schedule data-id="{{ r.id }}" data-name="{{ r.name }}" data-program-id="{{ r.program_id }}" data-studio-id="{{ r.studio_id }}" data-day-of-week="{{ r.day_of_week }}" data-display-order="{{ r.display_order }}" data-is-active="{{ r.is_active }}">編集</button>
+            <button type="button" class="button compact danger" data-archive-regular-schedule data-id="{{ r.id }}" data-name="{{ r.name }}">無効化</button>
+            <button type="button" class="button compact danger" data-delete-regular-schedule data-id="{{ r.id }}" data-name="{{ r.name }}">削除</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+</section>
+
+<div class="modal-backdrop" id="memberModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="memberModalTitle">メンバー追加</h2>
+        <p class="modal-note">月間予定表に表示するメンバーを登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/members/create" class="modal-form" id="memberForm">
+      <input type="hidden" name="member_id" id="memberId">
+      <label>表示名 <input name="display_name" id="memberDisplayName" required></label>
+      <label>略称 <input name="short_name" id="memberShortName" placeholder="省略表示が必要な場合のみ"></label>
+      <label>表示順 <input name="display_order" id="memberDisplayOrder" type="number" value="100"></label>
+      <label>所属
+        <div class="checkbox-group" id="memberDepartments">
+          {% for d in departments %}
+            <label class="check-row"><input type="checkbox" name="department_ids" value="{{ d.id }}" id="dept_{{ d.id }}"> {{ d.name }}</label>
+          {% endfor %}
+        </div>
+      </label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="memberIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="memberSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="eventTypeModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="eventTypeModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="eventTypeModalTitle">予定種類追加</h2>
+        <p class="modal-note">RD、年休、部長会など、予定表に載せる種類を登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/event-types/create" class="modal-form" id="eventTypeForm">
+      <input type="hidden" name="event_type_id" id="eventTypeId">
+      <label>コード <input name="code" id="eventTypeCode" placeholder="例: rd（空の場合は自動生成）"></label>
+      <label>名前 <input name="name" id="eventTypeName" required placeholder="例: RD"></label>
+      <label>短縮表示 <input name="short_label" id="eventTypeShortLabel" placeholder="例: RD"></label>
+      <label>表示色 <input name="display_color" id="eventTypeDisplayColor" type="color" value="#dbeafe"></label>
+      <label class="check-row"><input type="checkbox" name="is_leave" id="eventTypeIsLeave" value="true"> 休暇扱い</label>
+      <label class="check-row"><input type="checkbox" name="is_work_assignment" id="eventTypeIsWorkAssignment" value="true"> 業務予定扱い</label>
+      <label class="check-row"><input type="checkbox" name="requires_capacity_check" id="eventTypeRequiresCapacityCheck" value="true"> 定員チェック対象</label>
+      <label>表示順 <input name="display_order" id="eventTypeDisplayOrder" type="number" value="100"></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="eventTypeIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="eventTypeSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="departmentModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="departmentModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="departmentModalTitle">所属追加</h2>
+        <p class="modal-note">映像、音声、調整、照明、回線などの所属を登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/departments/create" class="modal-form" id="departmentForm">
+      <input type="hidden" name="department_id" id="departmentId">
+      <label>名前 <input name="name" id="departmentName" required placeholder="例: 映像"></label>
+      <label>コード <input name="code" id="departmentCode" required placeholder="例: video"></label>
+      <label>表示順 <input name="display_order" id="departmentDisplayOrder" type="number" value="100"></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="departmentIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="departmentSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="capacityRuleModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="capacityRuleModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="capacityRuleModalTitle">定員ルール追加</h2>
+        <p class="modal-note">予定種類ごとの定員ルールを登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/capacity-rules/create" class="modal-form" id="capacityRuleForm">
+      <input type="hidden" name="rule_id" id="ruleId">
+      <label>予定種類
+        <select name="event_type_id" id="ruleEventTypeId" required>
+          {% for e in event_types %}
+            <option value="{{ e.id }}">{{ e.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>所属
+        <select name="department_id" id="ruleDepartmentId">
+          <option value="0">全所属</option>
+          {% for d in departments %}
+            <option value="{{ d.id }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>曜日タイプ
+        <select name="day_type" id="ruleDayType" required>
+          <option value="weekday">平日</option>
+          <option value="weekend">週末</option>
+          <option value="all">全日</option>
+        </select>
+      </label>
+      <label>必要人数 <input name="required_count" id="ruleRequiredCount" type="number" min="0" required></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="ruleIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="ruleSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="studioModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="studioModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="studioModalTitle">スタジオ追加</h2>
+        <p class="modal-note">スタジオA、スタジオBなどを登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/studios/create" class="modal-form" id="studioForm">
+      <input type="hidden" name="studio_id" id="studioId">
+      <label>名前 <input name="name" id="studioName" required placeholder="例: スタジオA"></label>
+      <label>コード <input name="code" id="studioCode" required placeholder="例: studio_a"></label>
+      <label>表示順 <input name="display_order" id="studioDisplayOrder" type="number" value="100"></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="studioIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="studioSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="programModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="programModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="programModalTitle">番組追加</h2>
+        <p class="modal-note">番組名を登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/programs/create" class="modal-form" id="programForm">
+      <input type="hidden" name="program_id" id="programId">
+      <label>名前 <input name="name" id="programName" required placeholder="例: ニュース番組"></label>
+      <label>コード <input name="code" id="programCode" required placeholder="例: news"></label>
+      <label>短縮表示 <input name="short_label" id="programShortLabel" placeholder="例: ニュース"></label>
+      <label>表示色 <input name="display_color" id="programDisplayColor" type="color" value="#dbeafe"></label>
+      <label>表示順 <input name="display_order" id="programDisplayOrder" type="number" value="100"></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="programIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="programSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="regularScheduleModal" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="regularScheduleModalTitle">
+    <div class="modal-header">
+      <div>
+        <h2 id="regularScheduleModalTitle">レギュラー追加</h2>
+        <p class="modal-note">曜日ごとの定番番組を登録します。</p>
+      </div>
+      <button type="button" class="modal-close" data-close-modal aria-label="閉じる">×</button>
+    </div>
+    <form method="post" action="/ui/regular-schedules/create" class="modal-form" id="regularScheduleForm">
+      <input type="hidden" name="regular_schedule_id" id="regularScheduleId">
+      <label>名前 <input name="name" id="regularScheduleName" required placeholder="例: 月曜レギュラー"></label>
+      <label>番組
+        <select name="program_id" id="regularScheduleProgramId" required>
+          {% for p in programs %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>スタジオ
+        <select name="studio_id" id="regularScheduleStudioId" required>
+          {% for s in studios %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>曜日
+        <select name="day_of_week" id="regularScheduleDayOfWeek" required>
+          <option value="0">月曜</option>
+          <option value="1">火曜</option>
+          <option value="2">水曜</option>
+          <option value="3">木曜</option>
+          <option value="4">金曜</option>
+        </select>
+      </label>
+      <label>表示順 <input name="display_order" id="regularScheduleDisplayOrder" type="number" value="100"></label>
+      <label class="check-row"><input type="checkbox" name="is_active" id="regularScheduleIsActive" value="true" checked> 有効</label>
+      <div class="modal-actions">
+        <button type="button" class="button secondary" data-close-modal>キャンセル</button>
+        <button type="submit" id="regularScheduleSubmitBtn">追加</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  function openModal(modal) {
+    if (!modal) return;
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    const firstInput = modal.querySelector("input, select, textarea, button");
+    if (firstInput) firstInput.focus();
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  function resetAllForms() {
+    resetMemberForm();
+    resetEventTypeForm();
+    resetDepartmentForm();
+    resetCapacityRuleForm();
+    resetStudioForm();
+    resetProgramForm();
+    resetRegularScheduleForm();
+  }
+
+  function resetMemberForm() {
+    document.getElementById("memberForm").action = "/ui/members/create";
+    document.getElementById("memberId").value = "";
+    document.getElementById("memberDisplayName").value = "";
+    document.getElementById("memberShortName").value = "";
+    document.getElementById("memberDisplayOrder").value = "100";
+    document.getElementById("memberIsActive").checked = true;
+    // Uncheck all department checkboxes
+    document.querySelectorAll("#memberDepartments input[type='checkbox']").forEach(cb => cb.checked = false);
+    document.getElementById("memberModalTitle").textContent = "メンバー追加";
+    document.getElementById("memberSubmitBtn").textContent = "追加";
+  }
+
+  function resetEventTypeForm() {
+    document.getElementById("eventTypeForm").action = "/ui/event-types/create";
+    document.getElementById("eventTypeId").value = "";
+    document.getElementById("eventTypeCode").value = "";
+    document.getElementById("eventTypeName").value = "";
+    document.getElementById("eventTypeShortLabel").value = "";
+    document.getElementById("eventTypeDisplayColor").value = "";
+    document.getElementById("eventTypeDisplayOrder").value = "100";
+    document.getElementById("eventTypeIsLeave").checked = false;
+    document.getElementById("eventTypeIsWorkAssignment").checked = false;
+    document.getElementById("eventTypeRequiresCapacityCheck").checked = false;
+    document.getElementById("eventTypeIsActive").checked = true;
+    document.getElementById("eventTypeModalTitle").textContent = "予定種類追加";
+    document.getElementById("eventTypeSubmitBtn").textContent = "追加";
+  }
+
+  function resetDepartmentForm() {
+    document.getElementById("departmentForm").action = "/ui/departments/create";
+    document.getElementById("departmentId").value = "";
+    document.getElementById("departmentName").value = "";
+    document.getElementById("departmentCode").value = "";
+    document.getElementById("departmentDisplayOrder").value = "100";
+    document.getElementById("departmentIsActive").checked = true;
+    document.getElementById("departmentModalTitle").textContent = "所属追加";
+    document.getElementById("departmentSubmitBtn").textContent = "追加";
+  }
+
+  function resetCapacityRuleForm() {
+    document.getElementById("capacityRuleForm").action = "/ui/capacity-rules/create";
+    document.getElementById("ruleId").value = "";
+    document.getElementById("ruleEventTypeId").selectedIndex = 0;
+    document.getElementById("ruleDepartmentId").selectedIndex = 0;
+    document.getElementById("ruleDayType").selectedIndex = 0;
+    document.getElementById("ruleRequiredCount").value = "";
+    document.getElementById("ruleIsActive").checked = true;
+    document.getElementById("capacityRuleModalTitle").textContent = "定員ルール追加";
+    document.getElementById("ruleSubmitBtn").textContent = "追加";
+  }
+
+  function resetStudioForm() {
+    document.getElementById("studioForm").action = "/ui/studios/create";
+    document.getElementById("studioId").value = "";
+    document.getElementById("studioName").value = "";
+    document.getElementById("studioCode").value = "";
+    document.getElementById("studioDisplayOrder").value = "100";
+    document.getElementById("studioIsActive").checked = true;
+    document.getElementById("studioModalTitle").textContent = "スタジオ追加";
+    document.getElementById("studioSubmitBtn").textContent = "追加";
+  }
+
+  function resetProgramForm() {
+    document.getElementById("programForm").action = "/ui/programs/create";
+    document.getElementById("programId").value = "";
+    document.getElementById("programName").value = "";
+    document.getElementById("programCode").value = "";
+    document.getElementById("programShortLabel").value = "";
+    document.getElementById("programDisplayColor").value = "";
+    document.getElementById("programDisplayOrder").value = "100";
+    document.getElementById("programIsActive").checked = true;
+    document.getElementById("programModalTitle").textContent = "番組追加";
+    document.getElementById("programSubmitBtn").textContent = "追加";
+  }
+
+  function resetRegularScheduleForm() {
+    document.getElementById("regularScheduleForm").action = "/ui/regular-schedules/create";
+    document.getElementById("regularScheduleId").value = "";
+    document.getElementById("regularScheduleName").value = "";
+    document.getElementById("regularScheduleProgramId").selectedIndex = 0;
+    document.getElementById("regularScheduleStudioId").selectedIndex = 0;
+    document.getElementById("regularScheduleDayOfWeek").selectedIndex = 0;
+    document.getElementById("regularScheduleDisplayOrder").value = "100";
+    document.getElementById("regularScheduleIsActive").checked = true;
+    document.getElementById("regularScheduleModalTitle").textContent = "レギュラー追加";
+    document.getElementById("regularScheduleSubmitBtn").textContent = "追加";
+  }
+
+  document.querySelectorAll("[data-open-modal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modalId = button.dataset.openModal;
+      resetAllForms();
+      openModal(document.getElementById(modalId));
+    });
+  });
+
+  document.querySelectorAll("[data-edit-member]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("memberModal");
+      document.getElementById("memberForm").action = "/ui/members/update";
+      document.getElementById("memberId").value = button.dataset.id;
+      document.getElementById("memberDisplayName").value = button.dataset.displayName;
+      document.getElementById("memberShortName").value = button.dataset.shortName;
+      document.getElementById("memberDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("memberIsActive").checked = button.dataset.isActive === "true";
+      
+      // Load member departments
+      const memberId = button.dataset.id;
+      fetch(`/api/calendar/members/${memberId}/departments`)
+        .then(res => res.json())
+        .then(data => {
+          // Uncheck all checkboxes first
+          document.querySelectorAll("#memberDepartments input[type='checkbox']").forEach(cb => cb.checked = false);
+          // Check member's departments
+          if (data.ok && data.data) {
+            data.data.forEach(md => {
+              const checkbox = document.getElementById(`dept_${md.department_id}`);
+              if (checkbox) checkbox.checked = true;
+            });
+          }
+        });
+      
+      document.getElementById("memberModalTitle").textContent = "メンバー編集";
+      document.getElementById("memberSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-event-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("eventTypeModal");
+      document.getElementById("eventTypeForm").action = "/ui/event-types/update";
+      document.getElementById("eventTypeId").value = button.dataset.id;
+      document.getElementById("eventTypeCode").value = button.dataset.code;
+      document.getElementById("eventTypeName").value = button.dataset.name;
+      document.getElementById("eventTypeShortLabel").value = button.dataset.shortLabel;
+      document.getElementById("eventTypeDisplayColor").value = button.dataset.displayColor;
+      document.getElementById("eventTypeDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("eventTypeIsLeave").checked = button.dataset.isLeave === "true";
+      document.getElementById("eventTypeIsWorkAssignment").checked = button.dataset.isWorkAssignment === "true";
+      document.getElementById("eventTypeRequiresCapacityCheck").checked = button.dataset.requiresCapacityCheck === "true";
+      document.getElementById("eventTypeIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("eventTypeModalTitle").textContent = "予定種類編集";
+      document.getElementById("eventTypeSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-department]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("departmentModal");
+      document.getElementById("departmentForm").action = "/ui/departments/update";
+      document.getElementById("departmentId").value = button.dataset.id;
+      document.getElementById("departmentName").value = button.dataset.name;
+      document.getElementById("departmentCode").value = button.dataset.code;
+      document.getElementById("departmentDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("departmentIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("departmentModalTitle").textContent = "所属編集";
+      document.getElementById("departmentSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-capacity-rule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("capacityRuleModal");
+      document.getElementById("capacityRuleForm").action = "/ui/capacity-rules/update";
+      document.getElementById("ruleId").value = button.dataset.id;
+      document.getElementById("ruleEventTypeId").value = button.dataset.eventTypeId;
+      document.getElementById("ruleDepartmentId").value = button.dataset.departmentId;
+      document.getElementById("ruleDayType").value = button.dataset.dayType;
+      document.getElementById("ruleRequiredCount").value = button.dataset.requiredCount;
+      document.getElementById("ruleIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("capacityRuleModalTitle").textContent = "定員ルール編集";
+      document.getElementById("ruleSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-studio]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("studioModal");
+      document.getElementById("studioForm").action = "/ui/studios/update";
+      document.getElementById("studioId").value = button.dataset.id;
+      document.getElementById("studioName").value = button.dataset.name;
+      document.getElementById("studioCode").value = button.dataset.code;
+      document.getElementById("studioDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("studioIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("studioModalTitle").textContent = "スタジオ編集";
+      document.getElementById("studioSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-program]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("programModal");
+      document.getElementById("programForm").action = "/ui/programs/update";
+      document.getElementById("programId").value = button.dataset.id;
+      document.getElementById("programName").value = button.dataset.name;
+      document.getElementById("programCode").value = button.dataset.code;
+      document.getElementById("programShortLabel").value = button.dataset.shortLabel;
+      document.getElementById("programDisplayColor").value = button.dataset.displayColor;
+      document.getElementById("programDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("programIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("programModalTitle").textContent = "番組編集";
+      document.getElementById("programSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-regular-schedule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById("regularScheduleModal");
+      document.getElementById("regularScheduleForm").action = "/ui/regular-schedules/update";
+      document.getElementById("regularScheduleId").value = button.dataset.id;
+      document.getElementById("regularScheduleName").value = button.dataset.name;
+      document.getElementById("regularScheduleProgramId").value = button.dataset.programId;
+      document.getElementById("regularScheduleStudioId").value = button.dataset.studioId;
+      document.getElementById("regularScheduleDayOfWeek").value = button.dataset.dayOfWeek;
+      document.getElementById("regularScheduleDisplayOrder").value = button.dataset.displayOrder;
+      document.getElementById("regularScheduleIsActive").checked = button.dataset.isActive === "true";
+      document.getElementById("regularScheduleModalTitle").textContent = "レギュラー編集";
+      document.getElementById("regularScheduleSubmitBtn").textContent = "更新";
+      openModal(modal);
+    });
+  });
+
+  document.querySelectorAll("[data-archive-member]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を無効化しますか？`)) {
+        fetch(`/ui/members/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-archive-event-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を無効化しますか？`)) {
+        fetch(`/ui/event-types/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-archive-department]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を無効化しますか？`)) {
+        fetch(`/ui/departments/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-archive-capacity-rule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm("この定員ルールを無効化しますか？")) {
+        fetch(`/ui/capacity-rules/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-archive-studio]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を無効化しますか？`)) {
+        fetch(`/ui/studios/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-archive-program]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を無効化しますか？`)) {
+        fetch(`/ui/programs/${button.dataset.id}/archive`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-member]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を削除しますか？この操作は取り消せません。`)) {
+        fetch(`/ui/members/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-event-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を削除しますか？この操作は取り消せません。`)) {
+        fetch(`/ui/event-types/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-department]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を削除しますか？この操作は取り消せません。`)) {
+        fetch(`/ui/departments/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-capacity-rule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm("この定員ルールを削除しますか？この操作は取り消せません。")) {
+        fetch(`/ui/capacity-rules/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-studio]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を削除しますか？この操作は取り消せません。`)) {
+        fetch(`/ui/studios/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-delete-program]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (confirm(`${button.dataset.name} を削除しますか？この操作は取り消せません。`)) {
+        fetch(`/ui/programs/${button.dataset.id}/delete`, { method: "POST" })
+          .then(() => location.reload());
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-close-modal]").forEach((button) => {
+    button.addEventListener("click", () => closeModal(button.closest(".modal-backdrop")));
+  });
+
+  // Handle member form submission to collect department IDs
+  document.getElementById("memberForm").addEventListener("submit", (event) => {
+    const checkedDepts = [];
+    document.querySelectorAll("#memberDepartments input[type='checkbox']:checked").forEach(cb => {
+      checkedDepts.push(cb.value);
+    });
+    
+    // Create hidden input for department_ids
+    let deptInput = document.getElementById("memberDepartmentIds");
+    if (!deptInput) {
+      deptInput = document.createElement("input");
+      deptInput.type = "hidden";
+      deptInput.name = "department_ids";
+      deptInput.id = "memberDepartmentIds";
+      document.getElementById("memberForm").appendChild(deptInput);
+    }
+    deptInput.value = checkedDepts.join(",");
+  });
+
+  document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) closeModal(backdrop);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".modal-backdrop.is-open").forEach(closeModal);
+    }
+  });
+})();
+</script>
+{% endblock %}
